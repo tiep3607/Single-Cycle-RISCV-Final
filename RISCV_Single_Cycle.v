@@ -7,7 +7,7 @@ module RISCV_Single_Cycle (
 
     // Wires
     wire [31:0] pc_out, pc_in, inst, imm, read_data1, read_data2, alu_result, mem_read_data, write_data;
-    wire [31:0] alu_operand2, pc_plus_4, branch_target, jalr_target;
+    wire [31:0] alu_operand2;
     wire reg_write, mem_read, mem_write, mem_to_reg, alu_src, branch, jump, zero;
     wire [3:0] alu_op;
     wire [1:0] pc_src;
