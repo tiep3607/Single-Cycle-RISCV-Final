@@ -14,19 +14,23 @@ module RISCV_Single_Cycle (
     wire pc_write;
 
     // PC
-    wire enable_pc_update = pc_write;
-    wire [31:0] next_pc = pc_in;
-    wire clk_in = clk;
-    wire rst_active_low = rst_n;
-    wire [31:0] current_pc;
+    wire enable_pc_update = 1'b1;
+    wire [31:0] next_pc;
+    wire [31:0] pc_plus_4, branch_target, jalr_target;
+    assign pc_plus_4 = pc_out + 4;
+    assign branch_target = pc_out + imm;
+    assign jalr_target = read_data1 + imm;
+    assign next_pc = (pc_src == 2'b00) ? pc_plus_4 :
+                     (pc_src == 2'b01) ? branch_target :
+                     (pc_src == 2'b10) ? jalr_target : pc_plus_4;
+    wire rst_active_low = ~rst_n;
     ProgramCounter pc_inst (
-        .clk_in(clk_in),
+        .clk_in(clk),
         .rst_active_low(rst_active_low),
         .next_pc(next_pc),
         .enable_pc_update(enable_pc_update),
-        .current_pc(current_pc)
+        .current_pc(pc_out)
     );
-    assign pc_out = current_pc;
 
     // IMEM
     IMEM IMEM_inst (
