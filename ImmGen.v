@@ -1,4 +1,4 @@
-module ImmediateGenerator (
+module ImmGen  (
     output reg [31:0] immediate,
     input [31:0] instruction
 );
