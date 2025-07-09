@@ -14,21 +14,19 @@ module RISCV_Single_Cycle (
     wire pc_write;
 
     // PC
-    assign pc_write = 1'b1; // Always write PC
-    assign pc_plus_4 = pc_out + 4;
-    assign branch_target = pc_out + imm;
-    assign jalr_target = read_data1 + imm;
-    assign pc_in = (pc_src == 2'b00) ? pc_plus_4 :
-                   (pc_src == 2'b01) ? branch_target :
-                   (pc_src == 2'b10) ? jalr_target : pc_plus_4;
-
-    PC pc_inst (
-        .clk(clk),
-        .rst_n(rst_n),
-        .pc_in(pc_in),
-        .pc_write(pc_write),
-        .pc_out(pc_out)
+    wire enable_pc_update = pc_write;
+    wire [31:0] next_pc = pc_in;
+    wire clk_in = clk;
+    wire rst_active_low = rst_n;
+    wire [31:0] current_pc;
+    ProgramCounter pc_inst (
+        .clk_in(clk_in),
+        .rst_active_low(rst_active_low),
+        .next_pc(next_pc),
+        .enable_pc_update(enable_pc_update),
+        .current_pc(current_pc)
     );
+    assign pc_out = current_pc;
 
     // IMEM
     IMEM IMEM_inst (
@@ -37,19 +35,25 @@ module RISCV_Single_Cycle (
     );
 
     // Control Unit
-    ControlUnit ctrl_inst (
-        .opcode(inst[6:0]),
-        .funct3(inst[14:12]),
-        .funct7(inst[31:25]),
-        .reg_write(reg_write),
-        .mem_read(mem_read),
-        .mem_write(mem_write),
-        .mem_to_reg(mem_to_reg),
-        .alu_op(alu_op),
-        .alu_src(alu_src),
-        .branch(branch),
-        .jump(jump),
-        .pc_src(pc_src)
+    wire [6:0] op_code = inst[6:0];
+    wire [2:0] func3 = inst[14:12];
+    wire [6:0] func7 = inst[31:25];
+    wire reg_wr, mem_rd, mem_wr, mem2reg, alu_src_sel, branch_en, jump_en;
+    wire [3:0] alu_ctrl;
+    wire [1:0] pc_sel;
+    MainController ctrl_inst (
+        .op_code(op_code),
+        .func3(func3),
+        .func7(func7),
+        .reg_wr(reg_wr),
+        .mem_rd(mem_rd),
+        .mem_wr(mem_wr),
+        .mem2reg(mem2reg),
+        .alu_ctrl(alu_ctrl),
+        .alu_src_sel(alu_src_sel),
+        .branch_en(branch_en),
+        .jump_en(jump_en),
+        .pc_sel(pc_sel)
     );
 
     // Register File
@@ -66,20 +70,29 @@ module RISCV_Single_Cycle (
     );
 
     // Immediate Generator
-    ImmGen imm_gen_inst (
-        .inst(inst),
-        .imm(imm)
+    wire [31:0] instruction = inst;
+    wire [31:0] immediate;
+    ImmediateGenerator imm_gen_inst (
+        .instruction(instruction),
+        .immediate(immediate)
     );
+    assign imm = immediate;
 
     // ALU
-    assign alu_operand2 = alu_src ? imm : read_data2;
-    ALU alu_inst (
-        .operand1(read_data1),
-        .operand2(alu_operand2),
-        .alu_op(alu_op),
-        .result(alu_result),
-        .zero(zero)
+    wire [31:0] srcA = read_data1;
+    wire [31:0] srcB = alu_src_sel ? immediate : read_data2;
+    wire [3:0] alu_ctrl_sig = alu_ctrl;
+    wire [31:0] alu_result_sig;
+    wire is_zero;
+    ArithmeticLogicUnit alu_inst (
+        .srcA(srcA),
+        .srcB(srcB),
+        .alu_ctrl(alu_ctrl_sig),
+        .alu_result(alu_result_sig),
+        .is_zero(is_zero)
     );
+    assign alu_result = alu_result_sig;
+    assign zero = is_zero;
 
     // Data Memory
     DMEM DMEM_inst (
@@ -102,6 +115,17 @@ module RISCV_Single_Cycle (
     always @(posedge clk) begin
         $display("Cycle=%0d, PC=%h, Inst=%h, x3=%h, imm=%h, alu_result=%h, reg_write=%b, alu_src=%b, alu_op=%b",
                  $time/10, pc_out, inst, Reg_inst.registers[3], imm, alu_result,
-                 ctrl_inst.reg_write, ctrl_inst.alu_src, ctrl_inst.alu_op);
+                 ctrl_inst.reg_wr, ctrl_inst.alu_src_sel, ctrl_inst.alu_ctrl);
     end
+
+    // Sửa lại các tín hiệu kết nối với các module mới
+    assign reg_write = reg_wr;
+    assign mem_read = mem_rd;
+    assign mem_write = mem_wr;
+    assign mem_to_reg = mem2reg;
+    assign alu_src = alu_src_sel;
+    assign branch = branch_en;
+    assign jump = jump_en;
+    assign alu_op = alu_ctrl;
+    assign pc_src = pc_sel;
 endmodule

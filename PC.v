@@ -1,14 +1,16 @@
-module PC (
-    input clk,
-    input rst_n,
-    input [31:0] pc_in,
-    input pc_write,
-    output reg [31:0] pc_out
+module ProgramCounter (
+    input clk_in,
+    input rst_active_low,
+    input [31:0] next_pc,
+    input enable_pc_update,
+    output reg [31:0] current_pc
 );
-    always @(posedge clk or negedge rst_n) begin
-        if (!rst_n)
-            pc_out <= 32'h00000000;
-        else if (pc_write)
-            pc_out <= pc_in;
+    always @(posedge clk_in or negedge rst_active_low) begin
+        if (rst_active_low == 1'b0) begin
+            current_pc <= 32'h00000000;
+        end else begin
+            if (enable_pc_update)
+                current_pc <= next_pc;
+        end
     end
 endmodule
