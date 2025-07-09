@@ -8,7 +8,7 @@ module ArithmeticLogicUnit (
     always @(*) begin
 	$display("ALU: Cycle=%0d, op1=%h, op2=%h, alu_op=%b, result=%h",
                  $time/10, srcA, srcB, alu_ctrl, alu_result);
-        unique casez (alu_ctrl)
+        casez (alu_ctrl)
             4'b0000: alu_result = srcA + srcB; // ADD
             4'b0001: alu_result = srcA - srcB; // SUB
             4'b0010: alu_result = srcA & srcB; // AND
