@@ -73,7 +73,7 @@ module RISCV_Single_Cycle (
 
     // ALU
     assign alu_operand2 = alu_src ? imm : read_data2;
-    MyALU alu_inst (
+    ALU alu_inst (
         .operand1(read_data1),
         .operand2(alu_operand2),
         .alu_op(alu_op),
